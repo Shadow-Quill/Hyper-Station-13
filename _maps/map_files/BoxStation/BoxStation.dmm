@@ -59383,7 +59383,6 @@
 /obj/structure/flora/ausbushes/lavendergrass,
 /obj/structure/flora/ausbushes/fullgrass,
 /obj/structure/flora/rock/pile/largejungle{
-	pixel_x = 0;
 	pixel_y = -35
 	},
 /obj/structure/flora/junglebush/c{
@@ -59433,8 +59432,7 @@
 "cFO" = (
 /obj/structure/flora/ausbushes/fullgrass,
 /obj/structure/flora/junglebush/large{
-	pixel_x = -23;
-	pixel_y = 0
+	pixel_x = -23
 	},
 /obj/machinery/light,
 /turf/open/floor/grass,

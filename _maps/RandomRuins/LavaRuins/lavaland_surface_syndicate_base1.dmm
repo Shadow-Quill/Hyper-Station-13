@@ -1110,7 +1110,6 @@
 /area/ruin/unpowered/syndicate_lava_base/virology)
 "co" = (
 /obj/structure/sign/warning/fire{
-	pixel_x = 0;
 	pixel_y = 32
 	},
 /obj/structure/closet/emcloset/anchored,
