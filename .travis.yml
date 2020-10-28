@@ -1,73 +1,55 @@
-language: generic
-sudo: false
-dist: xenial
-branches:
-  except:
-  - ___TGS3TempBranch
-  - ___TGSTempBranch
-matrix:
-  include:
-    - env:
-      - BUILD_TOOLS=true
-      name: "Build Tools"
-      addons:
-        apt:
-          packages:
-            - python3
-            - python3-pip
-            - python3-setuptools
-      cache:
-        directories:
-          - tgui/node_modules
-    - env:
-      - BUILD_TESTING=true
-      - BUILD_TOOLS=false
-      name: "Build All Maps"
-      addons:
-        apt:
-          packages:
-            - libstdc++6:i386
-      cache:
-        directories:
-          - $HOME/BYOND
-    - env:
-      - BUILD_TESTING=false
-      - BUILD_TOOLS=false
-      name: "Build and Run Unit Tests"
-      addons:
-        mariadb: '10.2'
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - libstdc++6:i386
-            - libssl-dev:i386
-            - gcc-multilib
-            - g++-7
-            - g++-7-multilib
-            - libmariadb-client-lgpl-dev:i386
-            - libmariadbd-dev
-      cache:
-        directories:
-          - $HOME/.cargo
-          - $HOME/BYOND
-          - $HOME/MariaDB
-          - $HOME/.rustup
+#pretending we're C because otherwise ruby will initialize, even with "language: dm".
+language: c
+
+env:
+  global:
+    - BASENAME="vorestation" # $BASENAME.dmb, $BASENAME.dme, etc.
+    - BYOND_MAJOR="513"
+    - BYOND_MINOR="1520"
+    - MACRO_COUNT=4
+
+cache:
+  directories:
+    - $HOME/BYOND-${BYOND_MAJOR}.${BYOND_MINOR}
+
+addons:
+  apt:
+    packages:
+      - libc6-i386
+      - libgcc1:i386
+      - libstdc++6:i386
+      - libssl-dev:i386
+
+before_install:
+  - chmod -R +x ./tools/travis
 
 install:
-  - tools/travis/install_build_tools.sh
-  - if [ $BUILD_TOOLS = false ] && [ $BUILD_TESTING = false ]; then mysql -u root -e 'CREATE DATABASE tg_travis;'; fi
-  - if [ $BUILD_TOOLS = false ] && [ $BUILD_TESTING = false ]; then mysql -u root tg_travis < SQL/tgstation_schema.sql; fi
-  - if [ $BUILD_TOOLS = false ] && [ $BUILD_TESTING = false ]; then mysql -u root -e 'CREATE DATABASE tg_travis_prefixed;'; fi
-  - if [ $BUILD_TOOLS = false ] && [ $BUILD_TESTING = false ]; then mysql -u root tg_travis_prefixed < SQL/tgstation_schema_prefixed.sql; fi
+  - ./tools/travis/install_byond.sh
 
 before_script:
-  - tools/travis/before_build_tools.sh
-  - tools/travis/before_build_byond.sh
+  - shopt -s globstar
 
 script:
-  - tools/travis/check_filedirs.sh tgstation.dme
-  - tools/travis/build_tools.sh || travis_terminate 1
-  - tools/travis/build_dependencies.sh || travis_terminate 1
-  - tools/travis/build_byond.sh
+  - ./tools/travis/compile_and_run.sh
+
+# Build-specific settings
+jobs:
+  include:
+    - stage: "File Tests" #This is the odd man out, with specific installs and stuff.
+      name: "Validate Files"
+      install: #Need python for some of the tag matching stuff
+        - pip install --user PyYaml -q
+        - pip install --user beautifulsoup4 -q
+      script: ./tools/travis/validate_files.sh
+      addons:
+        apt:
+          packages: ~ # Don't need any packages for this
+    - stage: "Unit Tests"
+      env: TEST_DEFINE="UNIT_TEST" TEST_FILE="code/_unit_tests.dm" RUN="1"
+      name: "Compile normally (unit tests)"
+    - stage: "Isolation Tests"
+      env: TEST_DEFINE="MAP_TEST" TEST_FILE="code/_map_tests.dm" RUN="0"
+      name: "Compile POIs (no run)"
+    - env: TEST_DEFINE="AWAY_MISSION_TEST" TEST_FILE="code/_away_mission_tests.dm" RUN="0"
+      name: "Compile away missions (no run)"
 
